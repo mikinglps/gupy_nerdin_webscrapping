@@ -1,12 +1,8 @@
-import dateFormatter from './dateFormatter.js';
-import compare from './sortByDate.js';
-import express from 'express'
-import puppeteer from 'puppeteer';
-import fs from "fs";
+import { app } from './app';
 
-const app = express();
 const port = 3000
 
+/*
 app.get('/refresh', async (req, res) => {
     const browser = await puppeteer.launch({headless: true});
     const page = await browser.newPage();
@@ -104,7 +100,7 @@ app.get('/refresh', async (req, res) => {
     res.send(listaVagas.sort(compare))
 });
 
-
+*/
 
 app.listen(port, () => {
     console.log(`server online
