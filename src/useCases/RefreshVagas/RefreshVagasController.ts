@@ -57,7 +57,6 @@ export class RefreshVagasController {
                 })
                 }
             }
-            
             //Gupy Scan
             //Gupy Infinite Scrolling Handleling
             
