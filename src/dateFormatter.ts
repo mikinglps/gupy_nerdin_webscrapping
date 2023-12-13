@@ -3,6 +3,12 @@ export default function dateFormatter(string) {
     let d = fullDate[1]
     let m = fullDate[3]
     let y = fullDate[5]
+    if(fullDate[1] === undefined){
+        fullDate = string.split('/', 3);
+        d = fullDate[0]
+        y = fullDate[2]
+    }
+    
     if(m == 'janeiro'){
         m = 1
     }else if(m == 'fevereiro'){
@@ -27,6 +33,9 @@ export default function dateFormatter(string) {
         m = 11
     }else if(m == 'dezembro'){
         m = 12
+    }else{
+        //Essa parte do código só é usada para filtro.
+        m = fullDate[1]
     }
 
     const date = new Date(m+'/'+d+'/'+y);
