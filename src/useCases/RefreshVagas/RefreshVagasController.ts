@@ -1,4 +1,6 @@
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-extra";
+import { Browser, executablePath } from "puppeteer";
+import pluginStealth from 'puppeteer-extra-plugin-stealth'
 import { Request, Response } from 'express'
 import { RefreshVagasUseCase } from "./RefreshVagasUseCase";
 import dateFormatter from "../../dateFormatter";
@@ -9,9 +11,15 @@ export class RefreshVagasController {
         private RefreshVagasUseCase: RefreshVagasUseCase
     ){}
         async handle (request: Request, response: Response): Promise<Response> {
-            const browser = await puppeteer.launch({headless: false});
-            const page = await browser.newPage();
-            await page.setDefaultNavigationTimeout(0);
+            //Puppeteer Config
+            puppeteer.use(pluginStealth())
+            const browser: Browser = await puppeteer.launch({headless: false, executablePath: executablePath()});
+            const page = await browser.newPage(); 
+            await page.setExtraHTTPHeaders({
+                'Accept-Language': 'pt_BR'
+            })
+            page.setDefaultNavigationTimeout(0);
+            //Nerdin Scan
             await page.goto('https://www.nerdin.com.br/vagas');
             await page.waitForSelector("#divListaVagas")
             const links = await page.$$eval("#divListaVagas > .container > div:nth-of-type(1) > a", el => el.map(link => link.href));
@@ -49,15 +57,16 @@ export class RefreshVagasController {
                 })
                 }
             }
-
+            
             //Gupy Scan
             //Gupy Infinite Scrolling Handleling
+            
             await page.goto('https://portal.gupy.io/job-search/term=Desenvolvedor')
-            await page.waitForSelector('main')
+            await page.waitForSelector('main', {timeout: 0})
             let stringLastItemDate = await page.$eval('main > ul > li:last-of-type > div > a > div > div:last-of-type > p', el => el.innerText );
             let dateSplitter = stringLastItemDate.split(': ', 2)[1];
             let dateFilter = dateFormatter(dateSplitter).date
-            while(dateCalculate(dateFilter) < 7){
+            while(dateCalculate(dateFilter) < 6){
                 const previousHeight = await page.evaluate('document.body.scrollHeight')
                 await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
                 await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`)
@@ -69,7 +78,7 @@ export class RefreshVagasController {
             const linksGupy = await page.$$eval('main > ul > li > div > a', el => el.map(link => link.href));
             for(const link of linksGupy){
                 page.goto(link);
-                await page.waitForSelector('main');
+                await page.waitForSelector('main', {timeout: 0});
                 const title = await page.$eval('main > div > div > div:nth-of-type(2) > h1', el => el.innerText)
                 await page.waitForSelector('main > div > div > div:nth-of-type(2) > div:first-of-type > p')
                 const data = await page.$eval('main > div > div > div:nth-of-type(2) > div:first-of-type > p', el => el.innerText)
@@ -88,7 +97,6 @@ export class RefreshVagasController {
                 const empresaNome = empresa.split('//', 2)[1];
                 const descricao = await page.$eval('main > div > section > div:nth-of-type(1)', el => el.innerText) + '\n'
                 const descricaoMetade = await page.$eval('main > div > section > div:nth-of-type(2)', el => el.innerText) + '\n'
-                
                 const descricaoFull = descricao + descricaoMetade
                 const obj = {
                     'titulo': title,
@@ -100,6 +108,7 @@ export class RefreshVagasController {
                     'descricao': descricaoFull,
                     'link': linkEmpresa
                 }
+                
 
                 try {
                     await this.RefreshVagasUseCase.execute(false, obj)
@@ -108,7 +117,9 @@ export class RefreshVagasController {
                         message: err.message || 'Unexpected error'
                 })
                 }
+                
             }
+        browser.close();
         const vacant = await this.RefreshVagasUseCase.execute(true)
         return response.status(201).json({
             status: 200,
